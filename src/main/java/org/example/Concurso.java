@@ -1,38 +1,61 @@
 package org.example;
 
+import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class Concurso {
+public class Concurso implements Serializable{
 
-    private static final String[][] datos = {
-            {"España", "Blanca Paloma"},
-            {"Alemania", "Sin candidato"},
-            {"Francia", "La Zarra"},
-            {"Italia", "Marco Mengoni"},
-            {"Reino Unido", "Los Brexit"},
-            {"Ucrania", "Tvorchi"},
-            {"Azerbaiyan", "ekdvje"},
-            {"Croacia", "Let 3"},
-            {"Finlandia", "Uno cualquiera"},
-            {"Irlanda", "Wild Youth"},
-            {"Israel", "Noa kirel"},
-            {"Letonia", "Sudden Lights"},
-            {"Malta", "The Buster"},
-            {"Noruega", "Alessandra"},
-            {"Albania", "Albina Kelmendi"},
-            {"Armenia", "Brunette"}
-
-    };
     private Set<Pais> paises;
+
+    private String path;
 
     public Concurso() {
         paises = new TreeSet<>();
-        rellenarPaises();
     }
 
-    private void rellenarPaises() {
-        for(String[] dato : datos){
-            paises.add(new Pais(dato[0], dato[1]));
+    public void rellenarPaises(String path) {
+
+        try(BufferedReader br = new BufferedReader(new FileReader(path))){
+            String linea = "";
+            while((linea=br.readLine())!=null){
+                // "España;Paloma".split(";")[0] -> "España"
+                // "España;Paloma".split(";")[1] -> "Paloma"
+                paises.add(new Pais(linea.split(";")[0],linea.split(";")[1]));
+            }
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Concurso(String path){
+        load(path);
+    }
+
+    public void save (String path){
+        try(ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(path))){
+
+            oos.writeObject(this);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+//            throw new RuntimeException(e);
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+    }
+
+    public void load(String path){
+        try(ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path))) {
+
+            Concurso c = (Concurso) ois.readObject();
+            paises = c.paises;
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -51,23 +74,68 @@ public class Concurso {
 
     }
 
-    public List<Pais> obtenerListadoPaisesPorPuntuacion(){
-        List<Pais> paisList = new ArrayList<>(paises);
+    public List<Pais> obtenerListadoPaisesPuntuacion() {
 
-        paisList.sort(Comparator.comparingInt(Pais::obtenerPuntuacion));
-
-        return paisList;
+        List<Pais> aux = new ArrayList<>(paises);
+        aux.sort(new Comparator<Pais>() {
+            @Override
+            public int compare(Pais o1, Pais o2) {
+                return o1.obtenerPuntuacion() - o2.obtenerPuntuacion();
+            }
+        });
+        return aux;
     }
-//
-//    public List<Pais> obtenerListadoPaisesAlfabeticamente(){
-//
-//    }
-//
-//    public Map<Pais, Map<Integer,Pais>> obtenerListadoPaisesYPuntuacionesEmitidas(){
-//
-//    }
-//
-    public List<String> obtenerListadoAlfabeticoCantantes(){
+
+    public List<Pais> obtenerListadoPaisesAlfabeticamente(){
+        return paises.stream()
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    public Map<Pais, Map<Integer,Pais>> obtenerListadoPaisesYPuntuacionesEmitidas(String path){
+        Map<Pais,Map<Integer,Pais>> aux = new TreeMap<>(
+                (p1,p2)->p2.obtenerPuntuacion()-p1.obtenerPuntuacion()
+        );
+
+        for(Pais p : paises)
+            aux.put(p,p.devolverVoto());
+
+        return aux;
+    }
+
+    public List<String> obtenerListadoCantantesAlfabeticamente() {
+        List<String> cantantes = new ArrayList<>();
+        for(Pais p : paises)
+            cantantes.add(p.getCantante());
+
+//        Collections.sort(cantantes);
+//        cantantes.sort((n1,n2)->n1.compareTo(n2));
+        cantantes.sort(String::compareTo);
+        return cantantes;
+    }
+
+    public void imprimirListadoPaisesAlfabeticamente(String path){
+        imprimir(obtenerListadoPaisesAlfabeticamente(), path, "Listado de paises alfabeticamente");
+    }
+
+    private void imprimir(List<Pais> paises,String path,String cabecera){
+
+        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(path)))){
+
+            pw.println(cabecera);
+            pw.println("---------------------");
+            for(Pais p : paises)
+                pw.println(p.getNombrePais());
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public void imprimirListadoPaisesPuntEmitidas(String path){
+
+
 
     }
 
